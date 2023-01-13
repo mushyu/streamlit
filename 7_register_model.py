@@ -10,93 +10,70 @@ from streamlit_echarts import st_echarts, JsCode
 mlflow.set_tracking_uri("http://app-mlflow-507xp:5000/")
 client = MlflowClient()
 this_exp_name = "libby_dog_classfication_train"
-st.text("Experiments: " + this_exp_name)
 
 # 抓取此experiment的所有runs
 st.sidebar.text("Experiments: \n   " + this_exp_name)
-if st.sidebar.button('Search Runs'):
-    with st.spinner('載入資料中，請稍候...'):
-        runs = mlflow.search_runs(experiment_names=[this_exp_name])
-        run_list = []
-        for run in runs:
-            run_list = run_list.append(run)
+# if st.sidebar.button('Search Runs'):
+runs = mlflow.search_runs(experiment_names=[this_exp_name])
+st.write('Runs in experiments: ' + this_exp_name)
 
-        gb = GridOptionsBuilder.from_dataframe(runs)
-        gb.configure_column('run_id', pinned='left')
-        gridOptions = gb.build()
-        AgGrid(
-            runs,
-            gridOptions=gridOptions,
-            height=200,
-            weight=1000
-        )
-        runs = mlflow.search_runs(
-            experiment_names=[this_exp_name],
-            output_format="list",
-        )
+run_id_list = []
+for run_id in runs['run_id']:
+    run_id_list.append(run_id)
 
-    st.sidebar.selectbox(key='run_list', label="Run name", options=(run_list), disabled=False, index=0)
-#         last_run = runs[-1]
-#         model_id = last_run.info.run_id
-#         st.text(last_run.info.run_id)
-#         client = mlflow.tracking.MlflowClient()
-#         history = client.get_metric_history(model_id, "loss")
-#         st.text(history)
-#         value = []
-#         step = []
-#         for item in history:
-#             value.append(item.value)
-#             step.append(item.step)
-#         st.text(value)
-#         st.text(step)
-#         options = {
+with st.spinner('載入資料中，請稍候...'):
+    gb = GridOptionsBuilder.from_dataframe(runs)
 
-#             "tooltip": {
-#                 "trigger": 'item',
-#                 "axisPointer": {
-#                     "type": 'shadow'
-#                 },
-#                 "formatter": '{a}｜{c}'
-#             },
-#             "legend": {
-#                 "show": False
-#             },
+    #         顯示表格(所有欄位)
+    #     gb.configure_column('run_id', header_name='Run', pinned='left')
+    runs = mlflow.search_runs(
+        experiment_names=[this_exp_name],
+        output_format="list",
+        filter_string="attributes.status = 'FINISHED'")
+    st.text(runs)
 
-#             "xAxis": {
-#                 "type": 'category',
-#                 "data": step
-#             },
-#             "yAxis": {
-#                 "type": 'value'
-#             },
-#             "series": [
-#                 {
-#                     "data": value,
-#                     "type": 'line'
-#                 }
-#             ]
-#         };
-#         st_echarts(options=options)
+    gridOptions = gb.build()
 
-# 選擇runs作為要註冊的模型
+    #         顯示表格(部分欄位)
+    #     gridOptions["columnDefs"]= [
+    #         { "field": 'run_id' },
+    #         { "field": 'metrics.accuracy' },
+    #         { "field": 'metrics.loss' },
+    #         { "field": 'metrics.lr' },
+    #         { "field": 'end_time' },
+    #         { "field": 'status' }
+    #     ]
 
+    AgGrid(
+        runs,
+        gridOptions=gridOptions, height=200, weight=1200
+    )
+    runs = mlflow.search_runs(
+        experiment_names=[this_exp_name],
+        output_format="list",
+    )
 
-
+# 下拉選單: 選擇要註冊的模型id
+selected_run_id = st.sidebar.selectbox(key='run_list', label="Select Run: ", options=(run_id_list), disabled=False,
+                                       index=0)
+st.write("you select: " + selected_run_id)
 
 # 註冊模型
 if st.sidebar.button('Register Model'):
-    client.create_registered_model("libby_dog_classfication_train")
-    result = client.create_model_version(
-        name="libby_dog_classfication_train",
-        source="/project/phusers/phapplications/mlflow-507xp/mlruns/3/005aadf7bc954e368d5131087c4ece2e/artifacts/model",
-        run_id="005aadf7bc954e368d5131087c4ece2e"
+    registered_model_name = "dog_classification_model_2"
+    runs_uri = "runs:/{}/artifacts/model".format(selected_run_id)
+
+    result = mlflow.register_model(
+        runs_uri,
+        registered_model_name
     )
 
-#     result = mlflow.register_model(
-#     "runs:/d16076a3ec534311817565e6527539c0/sklearn-model",
-#     "sk-learn-random-forest-reg"
-#     )
-
+    if result is not None:
+        st.write("Registration is successful!")
+        st.write("Registed Model Name: {}".format(result.name))
+        st.write("Registed Model Version: Version {}".format(result.version))
+    else:
+        st.write("Registration is Faild!")
 
 # 刪除已註冊模型
 # if st.sidebar.button('delete'):
@@ -108,43 +85,3 @@ if st.sidebar.button('Register Model'):
 
 # Delete a registered model along with all its versions
 #     client.delete_registered_model(name=this_exp_name)
-
-
-#
-#         history_accuracy=client.get_metric_history(model_id, "accuracy")
-#         st.text(history_accuracy)
-#         value = []
-#         step = []
-#         for item in history_accuracy:
-#             value.append(item.value)
-#             step.append(item.step)
-#         st.text(value)
-#         st.text(step)
-#         options = {
-
-#                 "tooltip": {
-#                     "trigger": 'item',
-#                     "axisPointer": {
-#                         "type": 'shadow'
-#                     },
-#                     "formatter": '{a}｜{c}'
-#                   },
-#                   "legend": {
-#                       "show": False
-#                   },
-
-#                   "xAxis": {
-#                     "type": 'category',
-#                     "data": step
-#                   },
-#                   "yAxis": {
-#                     "type": 'value'
-#                   },
-#                   "series": [
-#                     {
-#                       "data": value,
-#                       "type": 'line'
-#                     }
-#                   ]
-#             };
-#         st_echarts(options=options)
