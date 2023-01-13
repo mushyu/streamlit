@@ -1,0 +1,6 @@
+mlflow==1.26.1
+click==8
+primehub-python-sdk
+streamlit-aggrid
+st_echarts
+streamlit_echarts
